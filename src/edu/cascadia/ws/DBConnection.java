@@ -58,13 +58,28 @@ public class DBConnection {
 				e.printStackTrace();
 			}
 			Statement stmt = dbConn.createStatement();
-			String query = "SELECT * FROM user WHERE username = '" + uname
+			// only check for verified user
+			String query = "SELECT * FROM user WHERE status = 2 AND LOWER(username) = '" + uname
 					+ "' AND password=" + "'" + pwd + "'";
 			System.out.println(query);
 			ResultSet rs = stmt.executeQuery(query);
 			while (rs.next()) {
 				//System.out.println(rs.getString(1) + rs.getString(2) + rs.getString(3));
 				isUserAvailable = true;
+			}
+			
+			if (!isUserAvailable) {
+				System.out.println("No matching verified username");
+				// only check for verified user
+				query = "SELECT * FROM user WHERE status = 1 AND LOWER(username) = '" + uname
+						+ "' AND password=" + "'" + pwd + "'";
+				System.out.println(query);
+				rs = stmt.executeQuery(query);
+				while (rs.next()) {
+					System.out.println("Found username but not verified");
+					throw new Exception("User not verified");
+				}
+				
 			}
 		} catch (SQLException sqle) {
 				System.out.println("Exception in checkLogin sqle: " + sqle.getMessage());
@@ -87,14 +102,17 @@ public class DBConnection {
 	 * 
 	 * @param firstname
 	 * @param lastname
+	 * @param firstname
+	 * @param lastname
 	 * @param uname
 	 * @param phone
+	 * @param zipcode
 	 * @param pwd
 	 * @return
 	 * @throws SQLException
 	 * @throws Exception
 	 */
-	public static boolean insertUser(String firstname, String lastname, String uname, String phone, String pwd) throws SQLException, Exception {
+	public static boolean insertUser(String firstname, String lastname, String uname, String phone, String zipcode, String pwd, String verificationCode) throws SQLException, Exception {
 		boolean insertStatus = false;
 		Connection dbConn = null;
 		try {
@@ -105,8 +123,8 @@ public class DBConnection {
 				e.printStackTrace();
 			}
 			Statement stmt = dbConn.createStatement();
-			String query = "INSERT into user(firstname, lastname, username, phone, password) values('" + firstname+ "', '" +
-					lastname + "', '" + uname + "', '" 	+ phone + "', '" + pwd + "')";
+			String query = "INSERT into user(firstname, lastname, username, phone, zipcode, password, verificationcode) values('" + firstname+ "', '" +
+					lastname + "', '" + uname + "', '" 	+ phone + "', '" + zipcode + "', '" + pwd + "', '" + verificationCode + "')";
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -153,6 +171,20 @@ public class DBConnection {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+			// limit possible string overflow
+			if (bookTitle.length() > 50) {
+				bookTitle = bookTitle.substring(0, 50);
+			}
+	
+			if (author.length() > 50) {
+				author = author.substring(0, 50);
+			}
+	
+			if (desc.length() > 250) {
+				desc = desc.substring(0, 250);
+			}
+			
 			Statement stmt = dbConn.createStatement();
 			String query = "INSERT into book(isbn, title, author, edition, description) values('"+isbn+ "',"+"'"
 					+ bookTitle + "','" + author + "','" + edition + "','" + desc + "')";
@@ -243,7 +275,7 @@ public class DBConnection {
 			System.out.println(query);
 			ResultSet rs = stmt.executeQuery(query); */
 			
-			String query = "SELECT isbn, title, author, edition, description  from book";
+			String query = "SELECT id, isbn, title, author, edition, description  from book";
 			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
 			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
 
@@ -254,17 +286,6 @@ public class DBConnection {
 	        queryStatus = true;
 	        System.out.println("JSON: "+ json);
 			return json;
-			
-			// extract resultset to system.out for now
-//			while (rs.next()) {
-//				System.out.println("isbn:" + rs.getString("isbn"));
-//				System.out.println("title:" + rs.getString("title"));
-//				System.out.println("author:" + rs.getString("author"));
-//				System.out.println("edition:" + rs.getString("edition"));
-//				System.out.println("description:" + rs.getString("description"));
-//			}
-//			rs.close();
-//			stmt.close();
 			
 		} catch (SQLException sqle) {
 			//sqle.printStackTrace();
@@ -293,12 +314,12 @@ public class DBConnection {
 	 * @param username
 	 * @param askingPrice
 	 * @param bookCondition
-	 * @param note
+	 * @param comment
 	 * @return
 	 * @throws SQLException
 	 * @throws Exception
 	 */
-	public static boolean insertBook4Sale(String isbn, String username, String askingPrice, String bookCondition, String note) throws SQLException, Exception {
+	public static boolean insertBook4Sale(String isbn, String username, String askingPrice, String bookCondition, String comment) throws SQLException, Exception {
 		boolean insertStatus = false;
 		Connection dbConn = null;
 		try {
@@ -309,8 +330,19 @@ public class DBConnection {
 				e.printStackTrace();
 			}
 			Statement stmt = dbConn.createStatement();
-			String query = "INSERT into book_for_sale(isbn, username, askingprice, bookcondition, note) values('"+isbn+ "',"+"'"
-					+ username + "','" + askingPrice + "','" + bookCondition + "','" + note + "')";
+			System.out.println("Getting book ID");
+			// need to get the book id first
+			String queryBook = "SELECT id FROM book WHERE book.isbn = '" + isbn + "'";
+			System.out.println("Executing:" + queryBook);;
+			ResultSet rs = stmt.executeQuery(queryBook);
+			int bookID = -1;
+			if (rs.next()) {
+				bookID = rs.getInt("id");
+				System.out.println("book id to insert into book_for_sale:" + bookID);
+			}
+			System.out.println("BookID is " + bookID);
+			String query = "INSERT into book_for_sale(book_id, username, askingprice, bookcondition, comment) values("+ bookID + ", '"
+					+ username + "','" + askingPrice + "','" + bookCondition + "','" + comment + "')";
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -337,6 +369,149 @@ public class DBConnection {
 		return insertStatus;
 	}
 	
+	/**
+	 * Method to insert book isbn, title and author in DB
+	 * 
+	 * @param id
+	 * @param status
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean deleteBook4Sale(String id, String status) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			String query = "UPDATE book_for_sale set status = '" + status + "', last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
+					
+			//System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			//System.out.println(records);
+			//When record is successfully inserted
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in deleteBook4Sale sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+	
+	/**
+	 * Method to insert book isbn, title and author in DB
+	 * 
+	 * @param id
+	 * @param askingPrice
+	 * @param bookCondition
+	 * @param comment
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean updateBook4Sale(String id, String askingPrice, String bookCondition, String comment) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			String query = "UPDATE book_for_sale set askingprice = '" + askingPrice + "', bookCondition = '" + bookCondition + "', comment = '" + comment + "' WHERE id = " + id ;
+					
+			System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			
+			//When record is successfully inserted
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in updateBook4Sale sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+
+	public static String getBook4SaleById(String id) throws SQLException, Exception {
+		boolean queryStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, bfs.askingprice, "
+					+ " bfs.id, bfs.book_id, bfs.bookcondition, bfs.username, bfs.comment, bfs.add_timestamp, u.phone " 
+							+ "FROM book_for_sale AS bfs JOIN book AS b JOIN user AS u " + 
+					"ON b.id=bfs.book_id AND u.username = bfs.username WHERE bfs.id = " + id + " AND bfs.status = 1";
+			
+			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
+			Map<String, Object> book = bookEntityFactory.findSingle(new Object[]{});
+
+	        ObjectMapper mapper = new ObjectMapper();
+
+	        String json = mapper.writeValueAsString(book);
+	        
+	        queryStatus = true;
+	        System.out.println("JSON: "+ json);
+			return json;
+			
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			return Utility.constructJSON("getBook4SaleById",false, "Error occured. " + sqle.getMessage());
+			//throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			return Utility.constructJSON("getBook4SaleById",false, "Error occured. " + e.getMessage());
+			//throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		//return "";
+	}
+
 	public static String getBooks4Sale() throws SQLException, Exception {
 		boolean queryStatus = false;
 		Connection dbConn = null;
@@ -349,9 +524,9 @@ public class DBConnection {
 			}
 			
 			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, bfs.askingprice, "
-					+ " bfs.id, bfs.bookcondition, bfs.username, bfs.note, bfs.add_timestamp, u.phone " 
+					+ " bfs.id, bfs.book_id, bfs.bookcondition, bfs.username, bfs.comment, bfs.add_timestamp, u.phone " 
 							+ "FROM book_for_sale AS bfs JOIN book AS b JOIN user AS u " + 
-					"WHERE b.isbn=bfs.isbn AND u.username = bfs.username";
+					"ON b.id=bfs.book_id AND u.username = bfs.username WHERE bfs.status = 1 ORDER BY add_timestamp DESC";
 			
 			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
 			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
@@ -384,4 +559,71 @@ public class DBConnection {
 		//return "";
 	}
 
+	/**
+	 * Method to insert book isbn, title and author in DB
+	 * 
+	 * @param username
+	 * @param password
+	 * @param verification code
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean verifyRegistration(String username, String password, String code) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			// check if the record exist
+			String newUserQuery = "SELECT verificationcode FROM user WHERE LOWER(username) = '" + username + "' AND password ='" + password + "'";
+			System.out.println("Checking the user: " + newUserQuery);
+			ResultSet result = stmt.executeQuery(newUserQuery);
+			String verCode = "";
+			if (result.next()) {
+				verCode = result.getString("verificationcode");
+				System.out.println("Verification code in table >" + verCode + "<");
+			}
+			if (!code.equals(verCode)) {
+				// code does not match
+				System.out.println("Verification code does not match. Invalid");
+				// let's just delete the entry so user can re-register and not getting duplicate email 
+				String delUserQuery = "DELETE FROM user WHERE LOWER(username) = '" + username + "' AND password ='" + password + "'";
+				System.out.println("Deleting user: " + delUserQuery);
+				stmt.executeUpdate(delUserQuery);
+				
+				return false;
+			}
+			String query = "UPDATE user set status = 2 WHERE username = '" + username + "' AND password = '" + password + "'" ;
+					
+			//System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			//System.out.println(records);
+			//When record is successfully inserted
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in verifyRegistration sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+	
 }

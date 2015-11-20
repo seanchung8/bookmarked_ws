@@ -76,7 +76,7 @@ public class Login {
 
 			try {
 
-				result = DBConnection.checkLogin(uname, pwd);
+				result = DBConnection.checkLogin(uname.toLowerCase(), pwd);
 
 				//System.out.println("Inside checkCredentials try "+result);
 
