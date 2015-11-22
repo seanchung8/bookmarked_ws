@@ -15,7 +15,7 @@ import org.codemonkey.simplejavamail.Email;
 import org.codemonkey.simplejavamail.Mailer;
 import org.codemonkey.simplejavamail.TransportStrategy;
 //Path: http://localhost/<appln-folder-name>/register
-@Path("/register")
+@Path("/user")
 public class Register {
 	// HTTP Get Method
 	@GET 
@@ -141,6 +141,79 @@ public class Register {
 			return result;
 		}
 		
+		// HTTP Get Method
+		@GET 
+		// Path: http://localhost/<appln-folder-name>/register/getuserinfo
+		@Path("/getuserinfo")  
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON) 
+		// Query parameters are parameters: http://localhost/<appln-folder-name>/register/doregister?name=pqrs&username=abc&password=xyz
+		public String getUserInfo(@QueryParam("username") String uname){
+			String response = "";
+			System.out.println("Inside getUserInfo. Username:" + uname);
+			if (uname != null && uname.length() > 0) {
+				response = getUser(uname);
+			}
+			
+			return response;
+		}
+
+		private String getUser(String username) {
+			try {
+				String json = DBConnection.getUserInfo(username);
+				if(json != null && json.length() > 0) {
+					System.out.println("getUser was successful");
+					return json;
+				}
+			} catch(SQLException sqle){
+				System.out.println("getUser catch sqle. " + sqle.getMessage());
+			}
+			catch (Exception e) {
+				System.out.println("Inside getUser catch e. Info: " + e.getMessage());
+			}
+			
+			return "";
+		}
+
+		// HTTP Get Method
+		@GET 
+		// Path: http://localhost/<appln-folder-name>/register/updateuserinfo
+		@Path("/updateuserinfo")  
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON) 
+		// Query parameters are parameters: http://localhost/<appln-folder-name>/register/updateuserinfo?username=xxx
+		public String updateUserInfo(@QueryParam("username") String username, @QueryParam("firstname") String firstname, 
+				@QueryParam("lastname") String lastname,  @QueryParam("newusername") String newusername,
+				@QueryParam("phone") String phone, 
+				@QueryParam("zipcode") String zipcode){
+			String response = "";
+			System.out.println("Inside updateUserInfo. Username:" + username);
+			if (username != null && username.length() > 0) {
+				response = updateUser(username, firstname, lastname, newusername, phone, zipcode);
+			}
+			
+			return response;
+		}
+
+		private String updateUser(String username, String firstname, String lastname, String newUsername, String phone, String zipcode) {
+			try {
+				if (DBConnection.updateUser(username, firstname, lastname, newUsername, phone, zipcode)) {
+					return Utility.constructJSON("updateUser", true);
+				}
+				
+			} catch(SQLException sqle){
+				System.out.println("updateUser catch sqle. " + sqle.getMessage());
+				return Utility.constructJSON("updateUser", false, "Error occurred. " + sqle.getMessage());
+			}
+			catch (Exception e) {
+				System.out.println("Inside updateUser catch e. Info: " + e.getMessage());
+				return Utility.constructJSON("updateUser", false, "Error occurred. " + e.getMessage());
+			}
+			
+			return "";
+		}
+				
+
 	private void sendVerificationEmail(String firstname, String lastname, String emailAddr, int verificationCode) {
 		System.out.println("Inside sendVerificationEmail for " + firstname + " " + lastname + " " + emailAddr); 
 		final String host = System.getenv("BOOKMARKED_E_HOST") != null ? System.getenv("BOOKMARKED_E_HOST") : "smtp.gmail.com";

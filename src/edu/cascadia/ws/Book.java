@@ -206,6 +206,7 @@ public class Book {
 			return "";
 		}
 
+		//======================================
 		// HTTP Get Method
 		@GET 
 		// Path: http://localhost/<appln-folder-name>/book/addbookforsale
@@ -305,6 +306,7 @@ public class Book {
 			return "";
 		}
 		
+		//======================================
 		// HTTP Get Method
 		@GET
 		// Path: http://localhost/<appln-folder-name>/book/deletebook
@@ -357,6 +359,7 @@ public class Book {
 			return result;
 		}
 
+		//======================================
 		// HTTP Get Method
 		@GET
 		// Path: http://localhost/<appln-folder-name>/book/updatebookforsale
@@ -395,6 +398,193 @@ public class Book {
 						System.out.println(sqle.getErrorCode());
 						result = 2;
 					}
+				}
+				catch (Exception e) {
+					// TODO Auto-generated catch block
+					System.out.println("Inside updateABook4Sale catch e. Info: " + e.getMessage());
+					result = 3;
+				}
+			}else{
+				System.out.println("Inside updateABook4Sale else");
+				result = 3;
+			}
+				
+			return result;
+		}
+
+		//======================================
+		@GET 
+		// Path: http://localhost/<appln-folder-name>/book/getbookswanted
+		@Path("/getbookswanted")  
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON) 
+		// Query parameters are parameters: http://localhost/<appln-folder-name>/register/doregister?name=pqrs&username=abc&password=xyz
+		public String getBooksWanted(){
+			String response = "";
+			System.out.println("Inside getBooksWanted ");
+			response = queryBooksWanted();
+			
+			return response;
+					
+		}
+		
+		private String queryBooksWanted() {
+			int result = 3;
+			try {
+				String json = DBConnection.getBooksWanted();
+				if (json != null && json.length() > 0) {
+					System.out.println("queryBooksWanted was successfully");
+					result = 0;
+					return json;
+				}
+			} catch(SQLException sqle){
+				System.out.println("queryBooksWanted catch sqle. " + sqle.getMessage());
+				
+			}
+			catch (Exception e) {
+				// TODO Auto-generated catch block
+				System.out.println("Inside queryBooksWanted catch e. Info: " + e.getMessage());
+				result = 3;
+			}
+			
+			return "";
+		}
+
+		//======================================
+		// HTTP Get Method
+		@GET 
+		// Path: http://localhost/<appln-folder-name>/book/addbookwanted
+		@Path("/addbookwanted")  
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON) 
+		public String addBookWanted(@QueryParam("isbn") String isbn, @QueryParam("username") String username, 
+			@QueryParam("comment") String comment){
+			String response = "";
+			System.out.println("Inside addBookWanted ");
+			int retCode = addABookWanted(isbn, username, comment);
+			if(retCode == 0){
+				response = Utility.constructJSON("addBookWanted",true);
+			}else if(retCode == 1){
+				response = Utility.constructJSON("addBookWanted",false, "Book already exists");
+			}else if(retCode == 2){
+				response = Utility.constructJSON("addBookWanted",false, "Special Characters are not allowed in book");
+			}else if(retCode == 3){
+				response = Utility.constructJSON("addBookWanted",false, "Error occured");
+			}
+			return response;
+					
+		}
+
+		private int addABookWanted(String isbn, String username, String comment){
+			System.out.println("Inside insertABook");
+			int result = 3;
+			if (Utility.isNotNull(isbn) && Utility.isNotNull(username)){
+				try {
+					if (DBConnection.insertBookWanted(isbn, username, comment)){
+						System.out.println("Wanted book " + isbn + " posted successfully");
+						result = 0;
+					}
+				} catch(SQLException sqle){
+					System.out.println("addABookWanted catch sqle. " + sqle.getMessage());
+					//When Primary key violation occurs that means user is already registered
+					if (sqle.getErrorCode() == 1062){
+						result = 1;
+					} 
+					else if (sqle.getErrorCode() == 1064){
+						System.out.println(sqle.getErrorCode());
+						result = 2;
+					}
+				}
+				catch (Exception e) {
+					// TODO Auto-generated catch block
+					System.out.println("Inside addABookWanted catch e. Info: " + e.getMessage());
+					result = 3;
+				}
+			}else{
+				System.out.println("Inside addABookWanted else");
+				result = 3;
+			}
+				
+			return result;
+		}
+
+		//======================================
+		// HTTP Get Method
+		@GET
+		// Path: http://localhost/<appln-folder-name>/book/deletebookwanted
+		@Path("/deletebookwanted")
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON)
+		public String deleteBookWanted(@QueryParam("id") String id, @QueryParam("status") String status) {
+			String response = "";
+			int retCode = deleteABookWanted(id, status);
+			if (retCode == 0) {
+				response = Utility.constructJSON("deleteBookWanted", true);
+			} else if (retCode == 1) {
+				response = Utility.constructJSON("deleteBookWanted", false, "Book wanted does not exists");
+			} else if (retCode == 3) {
+				response = Utility.constructJSON("deleteBookWanted", false, "Error occured");
+			}
+			return response;
+		}
+
+		private int deleteABookWanted(String id, String status){
+			System.out.println("Inside deleteABookWanted");
+			int result = 3;
+			
+			if (Utility.isNotNull(id) ){
+				try {
+					if (DBConnection.deleteBookWanted(id, status)) {
+						System.out.println("Book wanted id:" + id + " deleted successfully");
+						result = 0;
+					}
+				} catch(SQLException sqle){
+					System.out.println("deleteABookWanted catch sqle. " + sqle.getMessage());
+				}
+				catch (Exception e) {
+					// TODO Auto-generated catch block
+					System.out.println("Inside deleteABookWanted catch e. Info: " + e.getMessage());
+					result = 3;
+				}
+			}else{
+				System.out.println("Inside deleteABookWanted else");
+				result = 3;
+			}
+				
+			return result;
+		}
+
+		//======================================
+		// HTTP Get Method
+		@GET
+		// Path: http://localhost/<appln-folder-name>/book/updatebookwanted
+		@Path("/updatebookwanted")
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON)
+		public String updateBookWanted(@QueryParam("id") String id, @QueryParam("comment") String comment) {
+			String response = "";
+			int retCode = updateABookWanted(id, comment);
+			if (retCode == 0) {
+				response = Utility.constructJSON("updateBookWanted", true);
+			} else if (retCode == 1) {
+				response = Utility.constructJSON("updateBookWanted", false, "Book does not exists");
+			} else if (retCode == 3) {
+				response = Utility.constructJSON("updateBookWanted", false, "Error occured");
+			}
+			return response;
+		}
+
+		private int updateABookWanted(String id, String comment){
+			System.out.println("Inside updateABookWanted");
+			int result = 3;
+			if (Utility.isNotNull(id) ){
+				try {
+					if (DBConnection.updateBookWanted(id, comment)) {
+						System.out.println("Book wanted id:" + id + " updated successfully");
+						result = 0;
+					}
+				} catch(SQLException sqle){
+					System.out.println("updateABookWanted catch sqle. " + sqle.getMessage());
 				}
 				catch (Exception e) {
 					// TODO Auto-generated catch block

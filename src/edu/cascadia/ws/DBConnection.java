@@ -97,8 +97,60 @@ public class DBConnection {
 		}
 		return isUserAvailable;
 	}
+	
 	/**
-	 * Method to insert name, uname and pwd in DB
+     * Method to check whether uname and pwd combination are correct
+     * 
+     * @param uname
+     * @return
+     * @throws Exception
+     */
+	public static String getUserInfo(String uname) throws Exception {
+		Connection dbConn = null;
+		System.out.println("in getUserInfo for " +uname);
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				System.out.println("Exception in getUserInfo. E:" +e.getMessage());
+				e.printStackTrace();
+				
+				return Utility.constructJSON("getUserInfo",false, "Error occurred. " + e.getMessage());
+			}
+			Statement stmt = dbConn.createStatement();
+			// get user info
+			String query = "SELECT firstname, lastname, username, phone, zipcode FROM user WHERE status = 2 AND LOWER(username) = '" + uname
+					+ "'";
+			System.out.println(query);
+
+			EntityFactory userEntityFactory = new EntityFactory(dbConn, query);
+			Map<String, Object> user = userEntityFactory.findSingle(new Object[]{});
+
+	        ObjectMapper mapper = new ObjectMapper();
+
+	        String json = mapper.writeValueAsString(user);
+	        System.out.println("JSON: "+ json);
+			return json;
+
+		} catch (SQLException sqle) {
+				System.out.println("Exception in getUserInfo sqle: " + sqle.getMessage());
+				return Utility.constructJSON("getUserInfo",false, "Error occurred. " + sqle.getMessage());
+
+		} catch (Exception e) {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			return Utility.constructJSON("getUserInfo",false, "Error occurred. " + e.getMessage());
+			
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+	}
+	
+	/**
+	 * Method to insert user in DB
 	 * 
 	 * @param firstname
 	 * @param lastname
@@ -149,6 +201,60 @@ public class DBConnection {
 		}
 		return insertStatus;
 	}
+	
+	/**
+	 * Method to insert user in DB
+	 * 
+	 * @param username
+	 * @param firstname
+	 * @param lastname
+	 * @param newUsername
+	 * @param phone
+	 * @param zipcode
+	 * @return
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean updateUser(String username, String firstname, String lastname, 
+			String newUsername, String phone, String zipcode) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			String query = "UPDATE user SET firstname = \"" + firstname + "\", lastname = \"" + lastname + 
+					"\", username = '" + newUsername + "', phone ='" + phone +
+					"', zipcode = '" + zipcode + "' WHERE username = '" + username + "'";
+			
+			System.out.println(query);
+			int records = stmt.executeUpdate(query);
+
+			//When record is successfully update
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in updateUser sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+	
 	/**
 	 * Method to insert book isbn, title and author in DB
 	 * 
@@ -186,8 +292,8 @@ public class DBConnection {
 			}
 			
 			Statement stmt = dbConn.createStatement();
-			String query = "INSERT into book(isbn, title, author, edition, description) values('"+isbn+ "',"+"'"
-					+ bookTitle + "','" + author + "','" + edition + "','" + desc + "')";
+			String query = "INSERT into book(isbn, title, author, edition, description) values('"+isbn+ "', \"" +
+					bookTitle + "\",'" + author + "','" + edition + "',\"" + desc + "\")";
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -289,7 +395,7 @@ public class DBConnection {
 			
 		} catch (SQLException sqle) {
 			//sqle.printStackTrace();
-			return Utility.constructJSON("getallbooks",false, "Error occured. " + sqle.getMessage());
+			return Utility.constructJSON("getallbooks",false, "Error occurred. " + sqle.getMessage());
 			//throw sqle;
 		} catch (Exception e) {
 			//e.printStackTrace();
@@ -297,7 +403,7 @@ public class DBConnection {
 			if (dbConn != null) {
 				dbConn.close();
 			}
-			return Utility.constructJSON("getallbooks",false, "Error occured. " + e.getMessage());
+			return Utility.constructJSON("getallbooks",false, "Error occurred. " + e.getMessage());
 			//throw e;
 		} finally {
 			if (dbConn != null) {
@@ -308,7 +414,7 @@ public class DBConnection {
 	}
 	
 	/**
-	 * Method to insert book isbn, title and author in DB
+	 * Method to insert book isbn, username, askingPrice, bookCondition and comment in DB
 	 * 
 	 * @param isbn
 	 * @param username
@@ -370,7 +476,7 @@ public class DBConnection {
 	}
 	
 	/**
-	 * Method to insert book isbn, title and author in DB
+	 * Method to delete book for sale
 	 * 
 	 * @param id
 	 * @param status
@@ -437,7 +543,7 @@ public class DBConnection {
 				e.printStackTrace();
 			}
 			Statement stmt = dbConn.createStatement();
-			String query = "UPDATE book_for_sale set askingprice = '" + askingPrice + "', bookCondition = '" + bookCondition + "', comment = '" + comment + "' WHERE id = " + id ;
+			String query = "UPDATE book_for_sale set askingprice = '" + askingPrice + "', bookCondition = '" + bookCondition + "', comment = \"" + comment + "\", last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
 					
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
@@ -560,7 +666,204 @@ public class DBConnection {
 	}
 
 	/**
-	 * Method to insert book isbn, title and author in DB
+	 * Method to insert book wanted
+	 * 
+	 * @param isbn
+	 * @param username
+	 * @param comment
+	 * @return
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean insertBookWanted(String isbn, String username, String comment) throws SQLException, Exception {
+		boolean insertStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			System.out.println("Getting book ID");
+			// need to get the book id first
+			String queryBook = "SELECT id FROM book WHERE book.isbn = '" + isbn + "'";
+			System.out.println("Executing:" + queryBook);;
+			ResultSet rs = stmt.executeQuery(queryBook);
+			int bookID = -1;
+			if (rs.next()) {
+				bookID = rs.getInt("id");
+				System.out.println("book id to insert into book_for_sale:" + bookID);
+			}
+			System.out.println("BookID is " + bookID);
+			String query = "INSERT into book_wanted(book_id, username, comment) values("+ bookID + ", '"
+					+ username + "', \"" + comment + "\")";
+			//System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			//System.out.println(records);
+			//When record is successfully inserted
+			if (records > 0) {
+				insertStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in insertBookWanted sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return insertStatus;
+	}
+	
+	public static String getBooksWanted() throws SQLException, Exception {
+		boolean queryStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, "
+					+ " bw.id, bw.book_id, bw.username, bw.comment, bw.add_timestamp, u.phone " 
+							+ "FROM book_wanted AS bw JOIN book AS b JOIN user AS u " + 
+					"ON b.id=bw.book_id AND u.username = bw.username WHERE bw.status = 1 ORDER BY bw.add_timestamp DESC";
+			
+			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
+			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
+
+	        ObjectMapper mapper = new ObjectMapper();
+
+	        String json = mapper.writeValueAsString(books);
+	        
+	        queryStatus = true;
+	        System.out.println("JSON: "+ json);
+			return json;
+			
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			return Utility.constructJSON("getBooksWanted",false, "Error occured. " + sqle.getMessage());
+			//throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			return Utility.constructJSON("getBooksWanted",false, "Error occured. " + e.getMessage());
+			//throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		//return "";
+	}
+
+	/**
+	 * Method to delete book wanted
+	 * 
+	 * @param id
+	 * @param status
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean deleteBookWanted(String id, String status) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			String query = "UPDATE book_wanted set status = '" + status + "', last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
+					
+			//System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			//When record is successfully inserted
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in deleteBookWanted sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+	
+	/**
+	 * Method to update book wanted
+	 * 
+	 * @param id
+	 * @param comment
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean updateBookWanted(String id, String comment) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Statement stmt = dbConn.createStatement();
+			String query = "UPDATE book_wanted set comment = \"" + comment + "\", last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
+					
+			System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			
+			//When record is successfully inserted
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in updateBookWanted sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+
+	/**
+	 * Method to verify registration
 	 * 
 	 * @param username
 	 * @param password
