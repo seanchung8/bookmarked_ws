@@ -54,12 +54,12 @@ public class Utility {
 	}
 	
 	public static String escapeCharString(String text) {
-		// only escape char single quote and double quote
-		if (text.contains("\'") || text.contains("\"")) {
+		// only escape char single quote
+		if (text.contains("\'")) {
 			StringBuffer sb = new StringBuffer();
 			for (int i = 0; i < text.length(); i++) {
 				char ch = text.charAt(i);
-				if ((ch == '\'') || (ch == '\"') ) {
+				if (ch == '\'')  {
 					sb.append("\\" + ch);
 				} else {
 					sb.append(ch);

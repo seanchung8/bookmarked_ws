@@ -346,8 +346,8 @@ public class DBConnection {
 			}
 			
 			Statement stmt = dbConn.createStatement();
-			String query = "INSERT into book(isbn, title, author, edition, description) values('"+isbn+ "', \"" +
-					Utility.escapeCharString(bookTitle) + "\",'" + Utility.escapeCharString(author) + "','" + Utility.escapeCharString(edition) + "',\"" + Utility.escapeCharString(desc) + "\")";
+			String query = "INSERT into book(isbn, title, author, edition, description) values('"+isbn+ "', '" +
+					Utility.escapeCharString(bookTitle) + "', '" + Utility.escapeCharString(author) + "','" + Utility.escapeCharString(edition) + "', '" + Utility.escapeCharString(desc) + "')";
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -411,8 +411,8 @@ public class DBConnection {
 			}
 			
 			Statement stmt = dbConn.createStatement();
-			String query = "UPDATE book SET isbn='" + isbn + "', title=\"" + bookTitle + "\",author=\"" +  author + "\", edition='" + edition + "',description=\"" + Utility.escapeCharString(desc) + 
-					"\" WHERE id = " + id;
+			String query = "UPDATE book SET isbn='" + isbn + "', title=\"" + bookTitle + "\",author=\"" +  author + "\", edition='" + edition + "',description='" + Utility.escapeCharString(desc) + 
+					"' WHERE id = " + id;
 					
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
@@ -573,7 +573,7 @@ public class DBConnection {
 			System.out.println("askingPrice after trim is >" + askingPrice + "<");
 			
 			String query = "INSERT into book_for_sale(book_id, username, askingprice, bookcondition, comment) values("+ bookID + ", '"
-					+ username + "'," + askingPrice + ",'" + bookCondition + "','" + Utility.escapeCharString(comment) + "')";
+					+ username + "'," + askingPrice + ",'" + bookCondition + "', '" + Utility.escapeCharString(comment) + "')";
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -669,8 +669,8 @@ public class DBConnection {
 			}
 			Statement stmt = dbConn.createStatement();
 			String query = "UPDATE book_for_sale set askingprice = '" + askingPrice + 
-					"', bookCondition = '" + bookCondition + "', comment = \"" + 
-					Utility.escapeCharString(comment) + "\", last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
+					"', bookCondition = '" + bookCondition + "', comment = '" + 
+					Utility.escapeCharString(comment) + "', last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
 					
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
@@ -872,7 +872,7 @@ public class DBConnection {
 			}
 			System.out.println("BookID is " + bookID);
 			String query = "INSERT into book_wanted(book_id, username, comment) values("+ bookID + ", '"
-					+ username + "', \"" + Utility.escapeCharString(comment) + "\")";
+					+ username + "', '" + Utility.escapeCharString(comment) + "')";
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -1049,7 +1049,7 @@ public class DBConnection {
 				e.printStackTrace();
 			}
 			Statement stmt = dbConn.createStatement();
-			String query = "UPDATE book_wanted set comment = \"" + comment + "\", last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
+			String query = "UPDATE book_wanted set comment = '" + Utility.escapeCharString(comment) + "', last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
 					
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
