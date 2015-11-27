@@ -256,7 +256,7 @@ public class DBConnection {
 	}
 	
 	/**
-	 * Method to insert book isbn, title and author in DB
+	 * Method to insert book isbn, title, author, edition, description in DB
 	 * 
 	 * @param isbn
 	 * @param bookTitle
@@ -321,6 +321,70 @@ public class DBConnection {
 	}
 	
 	/**
+	 * Method to insert book isbn, title, author, edition, description in DB
+	 * 
+	 * @param isbn
+	 * @param bookTitle
+	 * @param author
+	 * @param edition
+	 * @param description
+	 * @return
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static boolean updateBook(String id, String isbn, String bookTitle, String author, String edition, String desc) throws SQLException, Exception {
+		boolean updateStatus = false;
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			// limit possible string overflow
+			if (bookTitle.length() > 50) {
+				bookTitle = bookTitle.substring(0, 50);
+			}
+	
+			if (author.length() > 50) {
+				author = author.substring(0, 50);
+			}
+	
+			if (desc.length() > 250) {
+				desc = desc.substring(0, 250);
+			}
+			
+			Statement stmt = dbConn.createStatement();
+			String query = "UPDATE book SET isbn='" + isbn + "', title=\"" + bookTitle + "\",author=\"" +  author + "\", edition='" + edition + "',description=\"" + desc + 
+					"\" WHERE id = " + id;
+					
+			System.out.println(query);
+			int records = stmt.executeUpdate(query);
+			//When record is successfully updated
+			if (records > 0) {
+				updateStatus = true;
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("In updateBook sqle: " + sqle.getMessage());
+			throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return updateStatus;
+	}
+	
+	/**
 	 * Method to delete book
 	 * 
 	 * @param isbn
@@ -381,7 +445,7 @@ public class DBConnection {
 			System.out.println(query);
 			ResultSet rs = stmt.executeQuery(query); */
 			
-			String query = "SELECT id, isbn, title, author, edition, description  from book";
+			String query = "SELECT id, isbn, title, author, edition, description from book";
 			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
 			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
 
@@ -447,9 +511,16 @@ public class DBConnection {
 				System.out.println("book id to insert into book_for_sale:" + bookID);
 			}
 			System.out.println("BookID is " + bookID);
+			
+			System.out.println("askingPrice is >" + askingPrice + "<");
+			if (askingPrice.trim().length() == 0 ) {
+				askingPrice = "0";
+			}
+			System.out.println("askingPrice after trim is >" + askingPrice + "<");
+			
 			String query = "INSERT into book_for_sale(book_id, username, askingprice, bookcondition, comment) values("+ bookID + ", '"
-					+ username + "','" + askingPrice + "','" + bookCondition + "','" + comment + "')";
-			//System.out.println(query);
+					+ username + "'," + askingPrice + ",'" + bookCondition + "','" + comment + "')";
+			System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
 			//When record is successfully inserted
@@ -665,6 +736,53 @@ public class DBConnection {
 		//return "";
 	}
 
+	public static String getBooks4SaleByUser(String username) throws SQLException, Exception {
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, bfs.askingprice, "
+					+ " bfs.id, bfs.book_id, bfs.bookcondition, bfs.username, bfs.comment, bfs.add_timestamp, u.phone " 
+							+ "FROM book_for_sale AS bfs JOIN book AS b JOIN user AS u " + 
+					"ON b.id=bfs.book_id AND u.username = bfs.username WHERE bfs.status = 1 AND bfs.username = '" + username + "' ORDER BY add_timestamp DESC";
+			
+			System.out.println("Query for getBooks4SaleByUser: "+ query);
+			
+			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
+			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
+
+	        ObjectMapper mapper = new ObjectMapper();
+
+	        String json = mapper.writeValueAsString(books);
+	        
+	        //System.out.println("JSON: "+ json);
+			return json;
+			
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			return Utility.constructJSON("getBooks4SaleByUser",false, "Error occured. " + sqle.getMessage());
+			//throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			// TODO Auto-generated catch block
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			return Utility.constructJSON("getBooks4SaleByUser",false, "Error occured. " + e.getMessage());
+			//throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		//return "";
+	}
+
 	/**
 	 * Method to insert book wanted
 	 * 
@@ -726,7 +844,6 @@ public class DBConnection {
 	}
 	
 	public static String getBooksWanted() throws SQLException, Exception {
-		boolean queryStatus = false;
 		Connection dbConn = null;
 		try {
 			try {
@@ -748,7 +865,6 @@ public class DBConnection {
 
 	        String json = mapper.writeValueAsString(books);
 	        
-	        queryStatus = true;
 	        System.out.println("JSON: "+ json);
 			return json;
 			
@@ -769,7 +885,50 @@ public class DBConnection {
 				dbConn.close();
 			}
 		}
-		//return "";
+	}
+
+	public static String getBooksWantedByUser(String username) throws SQLException, Exception {
+		Connection dbConn = null;
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, "
+					+ " bw.id, bw.book_id, bw.username, bw.comment, bw.add_timestamp, u.phone " 
+							+ "FROM book_wanted AS bw JOIN book AS b JOIN user AS u " + 
+					"ON b.id=bw.book_id AND u.username = bw.username WHERE bw.status = 1 AND bw.username = '" + 
+							username + "' ORDER BY bw.add_timestamp DESC";
+			System.out.println("query in getBooksWantedByUser" + query);
+			
+			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
+			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
+
+	        ObjectMapper mapper = new ObjectMapper();
+
+	        String json = mapper.writeValueAsString(books);
+	        
+	        return json;
+			
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			return Utility.constructJSON("getBooksWantedByUser",false, "Error occured. " + sqle.getMessage());
+			//throw sqle;
+		} catch (Exception e) {
+			//e.printStackTrace();
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			return Utility.constructJSON("getBooksWantedByUser",false, "Error occured. " + e.getMessage());
+			//throw e;
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
 	}
 
 	/**
