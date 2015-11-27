@@ -281,7 +281,7 @@ public class Book {
 		// Produces JSON as response
 		@Produces(MediaType.APPLICATION_JSON) 
 		// Query parameters are parameters: http://localhost/<appln-folder-name>/book/getbooksforsalebyusername?username=abc
-		public String getBooksForSaleByUsername(String username){
+		public String getBooksForSaleByUsername(@QueryParam("username") String username){
 			System.out.println("Inside getBooksForSaleByUsername ");
 			try {
 				return DBConnection.getBooks4SaleByUser(username);
@@ -432,7 +432,7 @@ public class Book {
 		// Produces JSON as response
 		@Produces(MediaType.APPLICATION_JSON) 
 		// Query parameters are parameters: http://localhost/<appln-folder-name>/book/getbookswantedbyusername
-		public String getBooksWantedByUsername(String username){
+		public String getBooksWantedByUsername(@QueryParam("username") String username){
 			System.out.println("Inside getBooksWantedByUsername ");
 			try {
 				String json = DBConnection.getBooksWantedByUser(username);

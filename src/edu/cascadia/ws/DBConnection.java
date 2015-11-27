@@ -40,7 +40,7 @@ public class DBConnection {
     /**
      * Method to check whether uname and pwd combination are correct
      * 
-     * @param uname
+     * @param uname (lowercase)
      * @param pwd
      * @return
      * @throws Exception
@@ -101,7 +101,7 @@ public class DBConnection {
 	/**
      * Method to check whether uname and pwd combination are correct
      * 
-     * @param uname
+     * @param uname (lowercase)
      * @return
      * @throws Exception
      */
@@ -186,7 +186,8 @@ public class DBConnection {
 			}
 		} catch (SQLException sqle) {
 			//sqle.printStackTrace();
-			System.out.println("in insertUser sqle: " + sqle.getMessage());throw sqle;
+			System.out.println("in insertUser sqle: " + sqle.getMessage());
+			throw sqle;
 		} catch (Exception e) {
 			//e.printStackTrace();
 			// TODO Auto-generated catch block
@@ -203,7 +204,7 @@ public class DBConnection {
 	}
 	
 	/**
-	 * Method to insert user in DB
+	 * Method to update user in DB
 	 * 
 	 * @param username
 	 * @param firstname
@@ -228,7 +229,7 @@ public class DBConnection {
 			Statement stmt = dbConn.createStatement();
 			String query = "UPDATE user SET firstname = \"" + firstname + "\", lastname = \"" + lastname + 
 					"\", username = '" + newUsername + "', phone ='" + phone +
-					"', zipcode = '" + zipcode + "' WHERE username = '" + username + "'";
+					"', zipcode = '" + zipcode + "' WHERE LOWER(username) = '" + username.toLowerCase() + "'";
 			
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
@@ -255,6 +256,59 @@ public class DBConnection {
 		return updateStatus;
 	}
 	
+	/**
+	 * Method to update user password in DB
+	 * 
+	 * @param username (lower case)
+	 * @param currentpass
+	 * @param newpass
+	 * @return
+	 * @throws SQLException
+	 * @throws Exception
+	 */
+	public static String updateUserPwd(String username, String currentPwd, String newPwd) throws SQLException, Exception {
+		Connection dbConn = null;
+		
+		if (currentPwd.equals(newPwd)) {
+			return Utility.constructJSON("updateUserPwd",false, "New password cannot be the same. ");
+		}
+		
+		try {
+			try {
+				dbConn = DBConnection.createConnection();
+			} catch (Exception e) {
+				return Utility.constructJSON("updateUserPwd",false, e.getMessage());
+			}
+			Statement stmt = dbConn.createStatement();
+			
+			// update the password where username = username and status = 2
+			String query = "UPDATE user SET password = \"" + newPwd + "\" WHERE LOWER(username) = '" + username + "' AND status = 2";
+			
+			System.out.println(query);
+			int records = stmt.executeUpdate(query);
+
+			//When record is successfully update
+			if (records > 0) {
+				return Utility.constructJSON("updateUserPwd",true);
+			}
+		} catch (SQLException sqle) {
+			//sqle.printStackTrace();
+			System.out.println("in updateUser sqle: " + sqle.getMessage());
+			return Utility.constructJSON("updateUserPwd",false, sqle.getMessage());
+		} catch (Exception e) {
+			//e.printStackTrace();
+			if (dbConn != null) {
+				dbConn.close();
+			}
+			return Utility.constructJSON("updateUserPwd",false, e.getMessage());
+		} finally {
+			if (dbConn != null) {
+				dbConn.close();
+			}
+		}
+		return "";
+	}
+
 	/**
 	 * Method to insert book isbn, title, author, edition, description in DB
 	 * 
@@ -293,7 +347,7 @@ public class DBConnection {
 			
 			Statement stmt = dbConn.createStatement();
 			String query = "INSERT into book(isbn, title, author, edition, description) values('"+isbn+ "', \"" +
-					bookTitle + "\",'" + author + "','" + edition + "',\"" + desc + "\")";
+					Utility.escapeCharString(bookTitle) + "\",'" + Utility.escapeCharString(author) + "','" + Utility.escapeCharString(edition) + "',\"" + Utility.escapeCharString(desc) + "\")";
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -357,7 +411,7 @@ public class DBConnection {
 			}
 			
 			Statement stmt = dbConn.createStatement();
-			String query = "UPDATE book SET isbn='" + isbn + "', title=\"" + bookTitle + "\",author=\"" +  author + "\", edition='" + edition + "',description=\"" + desc + 
+			String query = "UPDATE book SET isbn='" + isbn + "', title=\"" + bookTitle + "\",author=\"" +  author + "\", edition='" + edition + "',description=\"" + Utility.escapeCharString(desc) + 
 					"\" WHERE id = " + id;
 					
 			System.out.println(query);
@@ -519,7 +573,7 @@ public class DBConnection {
 			System.out.println("askingPrice after trim is >" + askingPrice + "<");
 			
 			String query = "INSERT into book_for_sale(book_id, username, askingprice, bookcondition, comment) values("+ bookID + ", '"
-					+ username + "'," + askingPrice + ",'" + bookCondition + "','" + comment + "')";
+					+ username + "'," + askingPrice + ",'" + bookCondition + "','" + Utility.escapeCharString(comment) + "')";
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -614,7 +668,9 @@ public class DBConnection {
 				e.printStackTrace();
 			}
 			Statement stmt = dbConn.createStatement();
-			String query = "UPDATE book_for_sale set askingprice = '" + askingPrice + "', bookCondition = '" + bookCondition + "', comment = \"" + comment + "\", last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
+			String query = "UPDATE book_for_sale set askingprice = '" + askingPrice + 
+					"', bookCondition = '" + bookCondition + "', comment = \"" + 
+					Utility.escapeCharString(comment) + "\", last_update = CURRENT_TIMESTAMP WHERE id = " + id ;
 					
 			System.out.println(query);
 			int records = stmt.executeUpdate(query);
@@ -749,7 +805,7 @@ public class DBConnection {
 			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, bfs.askingprice, "
 					+ " bfs.id, bfs.book_id, bfs.bookcondition, bfs.username, bfs.comment, bfs.add_timestamp, u.phone " 
 							+ "FROM book_for_sale AS bfs JOIN book AS b JOIN user AS u " + 
-					"ON b.id=bfs.book_id AND u.username = bfs.username WHERE bfs.status = 1 AND bfs.username = '" + username + "' ORDER BY add_timestamp DESC";
+					"ON b.id=bfs.book_id AND LOWER(u.username) = LOWER(bfs.username) WHERE bfs.status = 1 AND LOWER(bfs.username) = '" + username.toLowerCase() + "' ORDER BY add_timestamp DESC";
 			
 			System.out.println("Query for getBooks4SaleByUser: "+ query);
 			
@@ -816,7 +872,7 @@ public class DBConnection {
 			}
 			System.out.println("BookID is " + bookID);
 			String query = "INSERT into book_wanted(book_id, username, comment) values("+ bookID + ", '"
-					+ username + "', \"" + comment + "\")";
+					+ username + "', \"" + Utility.escapeCharString(comment) + "\")";
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);
 			//System.out.println(records);
@@ -856,7 +912,7 @@ public class DBConnection {
 			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, "
 					+ " bw.id, bw.book_id, bw.username, bw.comment, bw.add_timestamp, u.phone " 
 							+ "FROM book_wanted AS bw JOIN book AS b JOIN user AS u " + 
-					"ON b.id=bw.book_id AND u.username = bw.username WHERE bw.status = 1 ORDER BY bw.add_timestamp DESC";
+					"ON b.id=bw.book_id AND LOWER(u.username) = LOWER(bw.username) WHERE bw.status = 1 ORDER BY bw.add_timestamp DESC";
 			
 			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
 			List<Map<String, Object>> books = bookEntityFactory.findMultiple(new Object[]{});
@@ -900,8 +956,8 @@ public class DBConnection {
 			String query = "SELECT b.isbn, b.title, b.author, b.edition, b.description, "
 					+ " bw.id, bw.book_id, bw.username, bw.comment, bw.add_timestamp, u.phone " 
 							+ "FROM book_wanted AS bw JOIN book AS b JOIN user AS u " + 
-					"ON b.id=bw.book_id AND u.username = bw.username WHERE bw.status = 1 AND bw.username = '" + 
-							username + "' ORDER BY bw.add_timestamp DESC";
+					"ON b.id=bw.book_id AND LOWER(u.username) = LOWER(bw.username) WHERE bw.status = 1 AND LOWER(bw.username) = '" + 
+							username.toLowerCase() + "' ORDER BY bw.add_timestamp DESC";
 			System.out.println("query in getBooksWantedByUser" + query);
 			
 			EntityFactory bookEntityFactory = new EntityFactory(dbConn, query);
@@ -1024,7 +1080,7 @@ public class DBConnection {
 	/**
 	 * Method to verify registration
 	 * 
-	 * @param username
+	 * @param username (lowercase)
 	 * @param password
 	 * @param verification code
 	 * @throws SQLException
@@ -1054,13 +1110,13 @@ public class DBConnection {
 				// code does not match
 				System.out.println("Verification code does not match. Invalid");
 				// let's just delete the entry so user can re-register and not getting duplicate email 
-				String delUserQuery = "DELETE FROM user WHERE LOWER(username) = '" + username + "' AND password ='" + password + "'";
+				String delUserQuery = "DELETE FROM user WHERE LOWER(username) = '" + username.toLowerCase() + "' AND password ='" + password + "'";
 				System.out.println("Deleting user: " + delUserQuery);
 				stmt.executeUpdate(delUserQuery);
 				
 				return false;
 			}
-			String query = "UPDATE user set status = 2 WHERE username = '" + username + "' AND password = '" + password + "'" ;
+			String query = "UPDATE user set status = 2 WHERE LOWER(username) = '" + username.toLowerCase() + "' AND password = '" + password + "'" ;
 					
 			//System.out.println(query);
 			int records = stmt.executeUpdate(query);

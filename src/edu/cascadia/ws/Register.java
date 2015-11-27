@@ -19,11 +19,11 @@ import org.codemonkey.simplejavamail.TransportStrategy;
 public class Register {
 	// HTTP Get Method
 	@GET 
-	// Path: http://localhost/<appln-folder-name>/register/doregister
+	// Path: http://localhost/<appln-folder-name>/user/doregister
 	@Path("/doregister")  
 	// Produces JSON as response
 	@Produces(MediaType.APPLICATION_JSON) 
-	// Query parameters are parameters: http://localhost/<appln-folder-name>/register/doregister?name=pqrs&username=abc&password=xyz
+	// Query parameters are parameters: http://localhost/<appln-folder-name>/user/doregister?name=pqrs&username=abc&password=xyz
 	public String doRegister(@QueryParam("firstname") String firstname, @QueryParam("lastname") String lastname, @QueryParam("username") String uname,  @QueryParam("phone") String phone, @QueryParam("zipcode") String zipcode, @QueryParam("password") String pwd){
 		String response = "";
 		System.out.println("Inside doRegister. name:" + firstname + " " + lastname + " username:" + uname + " password:" + pwd);
@@ -93,7 +93,7 @@ public class Register {
 		public String verifyRegistration(@QueryParam("username") String uname,  @QueryParam("password") String pwd, @QueryParam("verificationcode") String code){
 			String response = "";
 			System.out.println("Inside verifyRegistration. username:" + uname + " verificationcode:" + code);
-			int retCode = verifyRegistrationCode(uname, pwd, code);
+			int retCode = verifyRegistrationCode(uname.toLowerCase(), pwd, code);
 			if(retCode == 0){
 				response = Utility.constructJSON("verifyRegistration",true);
 			}else if(retCode == 3){
@@ -110,7 +110,7 @@ public class Register {
 			int result = 3;
 			if(Utility.isNotNull(username) && Utility.isNotNull(pwd)){
 				try {
-					if (DBConnection.verifyRegistration(username, pwd, code)) {
+					if (DBConnection.verifyRegistration(username.toLowerCase(), pwd, code)) {
 						System.out.println("User " + username + " verified OK");
 						result = 0;
 					} else {
@@ -143,11 +143,11 @@ public class Register {
 		
 		// HTTP Get Method
 		@GET 
-		// Path: http://localhost/<appln-folder-name>/register/getuserinfo
+		// Path: http://localhost/<appln-folder-name>/user/getuserinfo
 		@Path("/getuserinfo")  
 		// Produces JSON as response
 		@Produces(MediaType.APPLICATION_JSON) 
-		// Query parameters are parameters: http://localhost/<appln-folder-name>/register/doregister?name=pqrs&username=abc&password=xyz
+		// Query parameters are parameters: http://localhost/<appln-folder-name>/user/doregister?name=pqrs&username=abc&password=xyz
 		public String getUserInfo(@QueryParam("username") String uname){
 			String response = "";
 			System.out.println("Inside getUserInfo. Username:" + uname);
@@ -160,7 +160,7 @@ public class Register {
 
 		private String getUser(String username) {
 			try {
-				String json = DBConnection.getUserInfo(username);
+				String json = DBConnection.getUserInfo(username.toLowerCase());
 				if(json != null && json.length() > 0) {
 					System.out.println("getUser was successful");
 					return json;
@@ -213,6 +213,30 @@ public class Register {
 			return "";
 		}
 				
+		// HTTP Get Method
+		@GET 
+		// Path: http://localhost/<appln-folder-name>/user/updateuserpassword
+		@Path("/updateuserpassword")  
+		// Produces JSON as response
+		@Produces(MediaType.APPLICATION_JSON) 
+		// Query parameters are parameters: http://localhost/<appln-folder-name>/user/updateuserpassword?username=xxx&oldpass=old&newpass=newpass
+		public String updateUserPassword(@QueryParam("username") String username, @QueryParam("currentpass") String currentpass, 
+				@QueryParam("newpass") String newpass)
+				{
+			String response = "";
+			System.out.println("Inside updateUserPassword. Username:" + username);
+			if (Utility.isNotNull(username) && Utility.isNotNull(currentpass) && Utility.isNotNull(newpass)) {
+				try {
+					response = DBConnection.updateUserPwd(username.toLowerCase(), currentpass, newpass);
+				} catch (Exception e) {
+					System.out.println("Exception in updateUserPassword. " + e.getMessage());
+				}
+			} else {
+				return Utility.constructJSON("updateUserPassword", false, "User name, password or new password cannot be empty");
+			}
+			
+			return response;
+		}
 
 	private void sendVerificationEmail(String firstname, String lastname, String emailAddr, int verificationCode) {
 		System.out.println("Inside sendVerificationEmail for " + firstname + " " + lastname + " " + emailAddr); 

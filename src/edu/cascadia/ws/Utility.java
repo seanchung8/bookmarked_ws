@@ -12,7 +12,7 @@ public class Utility {
 	 */
 	public static boolean isNotNull(String txt) {
 		// System.out.println("Inside isNotNull");
-		return txt != null && txt.trim().length() >= 0 ? true : false;
+		return txt != null && txt.trim().length() > 0 ? true : false;
 	}
 
 	/**
@@ -53,4 +53,22 @@ public class Utility {
 		return obj.toString(); 
 	}
 	
+	public static String escapeCharString(String text) {
+		// only escape char single quote and double quote
+		if (text.contains("\'") || text.contains("\"")) {
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < text.length(); i++) {
+				char ch = text.charAt(i);
+				if ((ch == '\'') || (ch == '\"') ) {
+					sb.append("\\" + ch);
+				} else {
+					sb.append(ch);
+				}
+			}
+			
+			return sb.toString();
+		}
+		
+		return text;
+	}
 }
